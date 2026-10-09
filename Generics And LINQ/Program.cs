@@ -2,6 +2,7 @@
 {
     public class Program
     {
+        
         static void Main(string[] args)
         {
             List<Device> deviceList = new List<Device>();

@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "抽象方法、虚方法、
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Generics And LINQ", "Generics And LINQ\Generics And LINQ.csproj", "{A83F4F8D-F8AF-460F-B025-1454DE128CB9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Event And Delegate", "Event And Delegate\Event And Delegate.csproj", "{9233E037-00CC-4331-9741-8EA4A411D68E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{A83F4F8D-F8AF-460F-B025-1454DE128CB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A83F4F8D-F8AF-460F-B025-1454DE128CB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A83F4F8D-F8AF-460F-B025-1454DE128CB9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9233E037-00CC-4331-9741-8EA4A411D68E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9233E037-00CC-4331-9741-8EA4A411D68E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9233E037-00CC-4331-9741-8EA4A411D68E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9233E037-00CC-4331-9741-8EA4A411D68E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
