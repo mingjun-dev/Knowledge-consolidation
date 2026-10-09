@@ -22,6 +22,9 @@ namespace 抽象方法_虚方法_运行时多态和接口
                     Console.WriteLine($"{item.Name}该设备不支持配置");
                 }
             }
+
+
+
         }
     }
 }
