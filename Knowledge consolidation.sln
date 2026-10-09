@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "值类型 vs 引用类型",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "抽象方法、虚方法、运行时多态和接口", "抽象方法、虚方法、运行时多态和接口\抽象方法、虚方法、运行时多态和接口.csproj", "{F7E4FD53-D8C4-458C-8B0A-28E9E687AD7F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Generics And LINQ", "Generics And LINQ\Generics And LINQ.csproj", "{A83F4F8D-F8AF-460F-B025-1454DE128CB9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{F7E4FD53-D8C4-458C-8B0A-28E9E687AD7F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F7E4FD53-D8C4-458C-8B0A-28E9E687AD7F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F7E4FD53-D8C4-458C-8B0A-28E9E687AD7F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A83F4F8D-F8AF-460F-B025-1454DE128CB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A83F4F8D-F8AF-460F-B025-1454DE128CB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A83F4F8D-F8AF-460F-B025-1454DE128CB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A83F4F8D-F8AF-460F-B025-1454DE128CB9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
