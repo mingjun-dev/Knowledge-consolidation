@@ -17,6 +17,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Threading;
+using static DeviceMonitor.Models.Message;
 
 namespace DeviceMonitor
 {
@@ -37,12 +38,24 @@ namespace DeviceMonitor
         [ObservableProperty]
         private int maxCount;
 
+        [ObservableProperty]
+        private double temperature;
+
+        [ObservableProperty]
+        private string statu;
+
+        [ObservableProperty]
+        private string status;
+
 
         private readonly IDeviceService _deviceService;
 
         private MockDeviceService mockDeviceService;
 
-        CancellationTokenSource _cts;
+        private CancellationTokenSource _cts;
+
+        private ModbusService modbusService;
+
 
         public MainViewModel(IDeviceService deviceService)
         {
@@ -63,21 +76,43 @@ namespace DeviceMonitor
         //}
 
         [RelayCommand(CanExecute = nameof(CanConnect))]
-        private void Connect()
+        private async Task ConnectAsync()
         {
             //if (SelectedDevice is null)
             //{
             //    StatusText = "请先选择一台设备";
             //    return;
             //}
-            SelectedDevice.IsConnected = true;
-            IsConnected = true;
-            WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage(SelectedDevice.Name, true, DateTime.Now, string.Empty));
-            CollectionViewSource.GetDefaultView(Devices).Refresh();
+            try
+            {
+                SelectedDevice.IsConnected = true;
+                IsConnected = true;
+                WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage(SelectedDevice.Name, true, DateTime.Now, ""));
+                CollectionViewSource.GetDefaultView(Devices).Refresh();
+                try
+                {
+                    modbusService = new ModbusService();
+                    await modbusService.ConnectAsync("127.0.0.1", 502, 3000);
+                    Statu = "已连接";
+                    _cts = new CancellationTokenSource();
+                    var ct = _cts.Token;
+                    _ = PollLoopAsync(ct);
+                }
+                catch (Exception)
+                {
+
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage("", false, DateTime.Now, $"{ex.Message}"));
+            }
+          
         }
 
         [RelayCommand]
-        private void Disconnect()
+        private async Task DisconnectAsync()
         {
             //if (SelectedDevice is null)
             //{
@@ -86,10 +121,34 @@ namespace DeviceMonitor
             //}
             SelectedDevice.IsConnected = false;
             IsConnected = false;
-            WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage(SelectedDevice.Name, false, DateTime.Now, string.Empty));
+            WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage(SelectedDevice.Name, false, DateTime.Now, ""));
             CollectionViewSource.GetDefaultView(Devices).Refresh();
+      
         }
+        private async Task PollLoopAsync(CancellationToken ct) 
+        {
+            while (!ct.IsCancellationRequested) 
+            {
+                try
+                {
+                    Temperature = await modbusService.ReadTemperatureAsync(1, 0);
+                    Status = "读取成功";
 
+                }
+                catch (Exception)
+                {
+                    Status = "读取失败";
+                }
+                try
+                {
+                    await Task.Delay(1000, ct); 
+                }
+                catch (OperationCanceledException)
+                {
+                    break; 
+                }
+            }
+        }
 
         partial void OnSelectedDeviceChanged(Device value)
         {
@@ -115,10 +174,12 @@ namespace DeviceMonitor
         }
 
         [RelayCommand]
-        private async Task ReadAllAsync(CancellationToken ct)
+        private async Task ReadAllAsync()
         {
+            _cts?.Cancel();
+            _cts?.Dispose();
             _cts = new CancellationTokenSource();
-            ct = _cts.Token;
+            var ct = _cts.Token;
             try
             {
                 var devices = await mockDeviceService.GetDevicesAsync();
@@ -128,6 +189,7 @@ namespace DeviceMonitor
                 int completedCount = 0;
                 var deviceName = devices.Select(async device =>
                 {
+                    ct.ThrowIfCancellationRequested();
                     var temperature = await mockDeviceService.ReadTemperatureAsync(device.Name, ct);
                     int done = Interlocked.Increment(ref completedCount);
                     ((IProgress<int>)progress).Report(done);
@@ -135,9 +197,10 @@ namespace DeviceMonitor
                 });
                 var results = await Task.WhenAll(deviceName);
             }
-            catch (Exception ex)
+            catch (OperationCanceledException o)
             {
                 Count = 0;
+                WeakReferenceMessenger.Default.Send(new DeviceStatusMessage("",false,DateTime.Now,$"读取温度失败:原因{o.Message}"));
             }
         }
         [RelayCommand]
@@ -149,7 +212,6 @@ namespace DeviceMonitor
         [RelayCommand]
         private void DemoWithoutLock()
         {
-
             var lists = new List<int>();
             var task = new Task[5];
             for (int i = 0; i < 5; i++)
@@ -233,7 +295,7 @@ namespace DeviceMonitor
             {
                 Text = "后台修改";
             });
-            
+
         }
     }
 }

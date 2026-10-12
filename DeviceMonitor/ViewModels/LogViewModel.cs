@@ -18,7 +18,7 @@ namespace DeviceMonitor.ViewModels
             LogItems.Add("系统启动完成");
             WeakReferenceMessenger.Default.Register<DeviceStatusMessage>(this, (_, msg) =>
             {
-                string line = $"[{msg.Time:HH:mm:ss}] {msg.DeviceName} {(msg.IsConnected ? "连接成功" : "断开")} {msg.Content} ";
+                string line = $"[{msg.Time:HH:mm:ss}] {msg.DeviceName} {(msg.IsConnected ? "连接成功" : "断开成功")} {msg.Content} ";
                 LogItems.Add(line); 
             });
         }
