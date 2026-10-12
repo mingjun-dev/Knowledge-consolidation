@@ -97,12 +97,48 @@
                 <Grid Grid.Row="2">
                   <views:LogView/>
                 </Grid>
-                <TextBox Text="多行文本区" Grid.Row="3" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" TextWrapping="Wrap">
+                <Grid Grid.Row="3">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <ProgressBar Grid.Row="0" Value="{Binding Count}" Maximum="{Binding MaxCount}" Height="20"/>
+                    <TextBox Text="多行文本框" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" TextWrapping="Wrap">
 
-                </TextBox>
-
+                    </TextBox>
+                </Grid>
             </Grid>
         </Grid>
-        <views:StatusBarView Grid.Row="2"/>
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <views:StatusBarView Grid.ColumnSpan="4" Grid.Row="0"/>
+            <Button Grid.Column="1" Grid.Row="1" Content="读取" Command="{Binding ReadAllCommand}" Margin="10"/>
+            <Button Grid.Column="2" Grid.Row="1" Content="取消" Command="{Binding CancelCommand}" Margin="10"/>
+            <Button Grid.Column="3" Grid.Row="1" Content="取消" Command="{Binding CancelCommand}" Margin="10"/>
+            <Button Grid.Column="4" Grid.Row="1" Content="不加锁演示按钮" Command="{Binding DemoWithoutLockCommand}" Margin="10"/>
+            <Button Grid.Column="5" Grid.Row="1" Content="加锁演示按钮" Command="{Binding DemoWithLockCommand}" Margin="10"/>
+            <Button Grid.Column="6" Grid.Row="1" Content="ConcurrentQueue" Command="{Binding ConcurrentQueueCommand}" Margin="10"/>
+            <TextBlock Grid.Row="0" Grid.Column="5" Text="{Binding Text}"/>
+            <Button Grid.Column="6" Grid.Row="0" Content="修改Text" Command="{Binding QueryCommand}"/>
+            <StackPanel Grid.Row="2" Grid.ColumnSpan="3">
+                <TextBlock x:Name="testText" Text="初始文字" FontSize="16" Margin="10"/>
+                <Button Content="后台直接改 UI（必崩）" Click="Crash_Click" Margin="10"/>
+                <Button Content="Dispatcher 修复版" Click="Fix_Click" Margin="10"/>
+            </StackPanel>
+        </Grid>
     </Grid>
+    
 </Window>

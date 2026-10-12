@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using DeviceMonitor.Models;
 using DeviceMonitor.Services;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -12,6 +13,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Threading;
@@ -29,12 +31,26 @@ namespace DeviceMonitor
         [ObservableProperty]
         private bool isConnected;
 
+        [ObservableProperty]
+        private int count;
+
+        [ObservableProperty]
+        private int maxCount;
+
+
         private readonly IDeviceService _deviceService;
+
+        private MockDeviceService mockDeviceService;
+
+        CancellationTokenSource _cts;
 
         public MainViewModel(IDeviceService deviceService)
         {
             _deviceService = deviceService;
             _ = LoadDevicesAsync();
+            mockDeviceService = new MockDeviceService();
+
+
             //_timer = new DispatcherTimer();
             //_timer.Interval = TimeSpan.FromSeconds(3); //1秒执行一次
             //_timer.Tick += Timer_Tick;
@@ -56,7 +72,7 @@ namespace DeviceMonitor
             //}
             SelectedDevice.IsConnected = true;
             IsConnected = true;
-            WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage(SelectedDevice.Name, true, DateTime.Now));
+            WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage(SelectedDevice.Name, true, DateTime.Now, string.Empty));
             CollectionViewSource.GetDefaultView(Devices).Refresh();
         }
 
@@ -70,7 +86,7 @@ namespace DeviceMonitor
             //}
             SelectedDevice.IsConnected = false;
             IsConnected = false;
-            WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage(SelectedDevice.Name, false, DateTime.Now));
+            WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage(SelectedDevice.Name, false, DateTime.Now, string.Empty));
             CollectionViewSource.GetDefaultView(Devices).Refresh();
         }
 
@@ -89,13 +105,135 @@ namespace DeviceMonitor
             return true;
         }
 
-        private async Task LoadDevicesAsync() 
+        private async Task LoadDevicesAsync()
         {
             var list = await _deviceService.GetDevicesAsync();
             foreach (var device in list)
             {
                 Devices.Add(device);
             }
+        }
+
+        [RelayCommand]
+        private async Task ReadAllAsync(CancellationToken ct)
+        {
+            _cts = new CancellationTokenSource();
+            ct = _cts.Token;
+            try
+            {
+                var devices = await mockDeviceService.GetDevicesAsync();
+                MaxCount = devices.Count;
+                Count = 0;
+                var progress = new Progress<int>(value => Count = value);
+                int completedCount = 0;
+                var deviceName = devices.Select(async device =>
+                {
+                    var temperature = await mockDeviceService.ReadTemperatureAsync(device.Name, ct);
+                    int done = Interlocked.Increment(ref completedCount);
+                    ((IProgress<int>)progress).Report(done);
+                    return temperature;
+                });
+                var results = await Task.WhenAll(deviceName);
+            }
+            catch (Exception ex)
+            {
+                Count = 0;
+            }
+        }
+        [RelayCommand]
+        private async Task CancelAsync()
+        {
+            _cts?.Cancel();
+        }
+
+        [RelayCommand]
+        private void DemoWithoutLock()
+        {
+
+            var lists = new List<int>();
+            var task = new Task[5];
+            for (int i = 0; i < 5; i++)
+            {
+                task[i] = Task.Run(() =>
+                {
+                    for (int j = 0; j < 3000; j++)
+                    {
+                        try
+                        {
+                            lists.Add(j);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show(ex.Message);
+                        }
+                    }
+                });
+            }
+            try
+            {
+                Task.WaitAll(task);
+                MessageBox.Show($"List.Count = {lists.Count}，期望 5000");
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+        }
+        private object _lock = new object();
+        [RelayCommand]
+        private void DemoWithLock()
+        {
+            var lists = new List<int>();
+            var task = new Task[5];
+
+            for (int i = 0; i < 5; i++)
+            {
+                task[i] = Task.Run(() =>
+                {
+                    for (int j = 0; j < 3000; j++)
+                    {
+                        lock (_lock)
+                        {
+                            lists.Add(j);
+                        }
+                    }
+                });
+            }
+            Task.WaitAll(task);
+            MessageBox.Show($"List.Count = {lists.Count}，期望 15000");
+        }
+        [RelayCommand]
+        private void ConcurrentQueue()
+        {
+            var cq = new ConcurrentQueue<int>();
+            var task = new Task[5];
+
+            for (int i = 0; i < 5; i++)
+            {
+                task[i] = Task.Run(() =>
+                {
+                    for (int j = 0; j < 3000; j++)
+                    {
+                        cq.Enqueue(j);
+                    }
+                });
+            }
+            Task.WaitAll(task);
+            MessageBox.Show($"List.Count = {cq.Count}，期望 15000");
+        }
+
+        [ObservableProperty]
+        private string text = "默认值";
+
+        [RelayCommand]
+        private void Query()
+        {
+            Task.Run(() =>
+            {
+                Text = "后台修改";
+            });
+            
         }
     }
 }
