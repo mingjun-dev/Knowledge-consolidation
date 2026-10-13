@@ -3,12 +3,14 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using DeviceMonitor.Models;
 using DeviceMonitor.Services;
+using Serilog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -47,6 +49,19 @@ namespace DeviceMonitor
         [ObservableProperty]
         private string status;
 
+        [ObservableProperty]
+        private DateTime? startTime;
+
+        [ObservableProperty]
+        private DateTime? endTime;
+
+        private ObservableCollection<SensorRecord> QueryResult;
+
+        [ObservableProperty]
+        private long id;
+
+        [ObservableProperty]
+        private DateTime? recordTime;
 
         private readonly IDeviceService _deviceService;
 
@@ -62,6 +77,7 @@ namespace DeviceMonitor
             _deviceService = deviceService;
             _ = LoadDevicesAsync();
             mockDeviceService = new MockDeviceService();
+            QueryResult = new ObservableCollection<SensorRecord>();
 
 
             //_timer = new DispatcherTimer();
@@ -70,6 +86,41 @@ namespace DeviceMonitor
             //_timer.Start(); //启动
         }
 
+        [RelayCommand]
+        private async Task HistoryQueryAsync()
+        {
+            var list =  await QueryDbAsync(StartTime ?? DateTime.Now, EndTime ?? DateTime.Now);
+            QueryResult.Clear();
+            foreach (var record in list) 
+            {
+                QueryResult.Add(record);
+            }
+        }
+
+        [RelayCommand]
+        private async Task StartDbTest()
+        {
+            Stopwatch sw = Stopwatch.StartNew();
+            Random rand = new Random();
+            for (int i = 0; i < 1000; i++)
+            {
+                var record = new SensorRecord
+                {
+                    Temperature = rand.Next(20, 50),
+                    RecordTime = DateTime.Now
+                };
+                await SqliteDbService.InsertAsync(Temperature, RecordTime ?? DateTime.Now);
+                await Task.Delay(1000);
+            }
+           
+            sw.Stop();
+            Log.Information($"写入1000条完成，总耗时：{sw.ElapsedMilliseconds} ms");
+        }
+        private async Task<List<SensorRecord>> QueryDbAsync(DateTime start, DateTime end)
+        {
+            var list = await SqliteDbService.QuerytAsync(start, end);
+            return list;
+        }
         //private void Timer_Tick(object? sender, EventArgs e)
         //{
         //    StatusText = "共用户端设备：" + Devices.Count + "台";
@@ -78,6 +129,7 @@ namespace DeviceMonitor
         [RelayCommand(CanExecute = nameof(CanConnect))]
         private async Task ConnectAsync()
         {
+
             //if (SelectedDevice is null)
             //{
             //    StatusText = "请先选择一台设备";
@@ -91,12 +143,14 @@ namespace DeviceMonitor
                 CollectionViewSource.GetDefaultView(Devices).Refresh();
                 try
                 {
+
+
                     modbusService = new ModbusService();
                     await modbusService.ConnectAsync("127.0.0.1", 502, 3000);
                     Statu = "已连接";
                     _cts = new CancellationTokenSource();
                     var ct = _cts.Token;
-                    _ = PollLoopAsync(ct);
+                    _ = Task.Run(() => PollLoopAsync(ct));
                 }
                 catch (Exception)
                 {
@@ -108,7 +162,7 @@ namespace DeviceMonitor
             {
                 WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage("", false, DateTime.Now, $"{ex.Message}"));
             }
-          
+
         }
 
         [RelayCommand]
@@ -119,33 +173,53 @@ namespace DeviceMonitor
             //    StatusText = "请先选择一台设备";
             //    return;
             //}
+            _cts.Cancel();
             SelectedDevice.IsConnected = false;
             IsConnected = false;
             WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage(SelectedDevice.Name, false, DateTime.Now, ""));
             CollectionViewSource.GetDefaultView(Devices).Refresh();
-      
+
+            try
+            {
+                modbusService?.Disconnect();
+                modbusService = null;
+            }
+            catch (Exception)
+            {
+
+            }
+
+
         }
-        private async Task PollLoopAsync(CancellationToken ct) 
+        private async Task PollLoopAsync(CancellationToken ct)
         {
-            while (!ct.IsCancellationRequested) 
+            while (!ct.IsCancellationRequested)
             {
                 try
                 {
                     Temperature = await modbusService.ReadTemperatureAsync(1, 0);
                     Status = "读取成功";
+                    try
+                    {
+                        await SqliteDbService.InsertAsync(Temperature, DateTime.Now);
+                    }
+                    catch (Exception)
+                    {
 
+                    }
                 }
                 catch (Exception)
                 {
                     Status = "读取失败";
+                    WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage("", false, DateTime.Now, "温度读取失败"));
                 }
                 try
                 {
-                    await Task.Delay(1000, ct); 
+                    await Task.Delay(200, ct);
                 }
                 catch (OperationCanceledException)
                 {
-                    break; 
+                    break;
                 }
             }
         }
@@ -200,7 +274,7 @@ namespace DeviceMonitor
             catch (OperationCanceledException o)
             {
                 Count = 0;
-                WeakReferenceMessenger.Default.Send(new DeviceStatusMessage("",false,DateTime.Now,$"读取温度失败:原因{o.Message}"));
+                WeakReferenceMessenger.Default.Send(new DeviceStatusMessage("", false, DateTime.Now, $"读取温度失败:原因{o.Message}"));
             }
         }
         [RelayCommand]

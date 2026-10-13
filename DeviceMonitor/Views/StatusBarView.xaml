@@ -12,6 +12,5 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <TextBlock  Grid.Row="0" Text="{Binding StatusText}" FontSize="25" FontWeight="Black"/>
-        
     </Grid>
 </UserControl>

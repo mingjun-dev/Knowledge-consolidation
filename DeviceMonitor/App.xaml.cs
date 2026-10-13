@@ -31,6 +31,8 @@ namespace DeviceMonitor
         private const string LogTemplate = "{Timestamp:yyyy-MM-dd HH:mm:ss fff} [{Level}] ({ThreadId}) {Message} {NewLine} {Excption}";
 
         private const string LogPath = "Logs\\log-.txt";
+
+        string  connectionString = "Data Source=DeviceMonitor.db;";
         protected override void OnStartup(StartupEventArgs e)
         {
 
@@ -43,7 +45,7 @@ namespace DeviceMonitor
                 .WriteTo.Console(outputTemplate: LogTemplate)
                 .WriteTo.File(LogPath, rollingInterval: RollingInterval.Day, outputTemplate: LogTemplate, shared: true)
                 .CreateLogger();
-
+            SqliteDbService.Initialize(connectionString);
             var services = new ServiceCollection();
 
             services.AddSingleton<IDeviceService, MockDeviceService>();
@@ -55,7 +57,7 @@ namespace DeviceMonitor
             ServiceProvider = services.BuildServiceProvider();
             var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
             mainWindow.Show();
-          
+           
         }
 
         protected override void OnExit(ExitEventArgs e)

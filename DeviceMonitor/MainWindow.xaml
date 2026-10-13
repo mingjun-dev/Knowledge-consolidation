@@ -6,148 +6,200 @@
         xmlns:local="clr-namespace:DeviceMonitor"
         xmlns:deviceMonitor="clr-namespace:DeviceMonitor"
         xmlns:views="clr-namespace:DeviceMonitor.Views"
+        xmlns:hc="https://handyorg.github.io/handycontrol"
+         xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
         mc:Ignorable="d"
         Title="MainWindow" Height="750" Width="1000">
     <Window.Resources>
         <deviceMonitor:BoolToBrushConverter x:Key="BoolToBrushConverter"/>
         <deviceMonitor:BoolToTextConverter x:Key="BoolToTextConverter"/>
     </Window.Resources>
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="Auto" />
-        </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-        <Grid Grid.Row="0" Grid.Column="0" Margin="10">
+    <TabControl>
+        <TabItem Header="设备监控">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-            </Grid>
-            <Border Background="Gray" BorderBrush="White" BorderThickness="1" Height="40" Width="Auto" >
-                <TextBlock VerticalAlignment="Center">
-                 <Run Text="设备监控面板" Foreground="White"/>
-                </TextBlock>
-            </Border>
-            <Grid Grid.Column="1">
-                <Button Content="刷新"  HorizontalAlignment="Right"/>
-            </Grid>
-        </Grid>
-
-        <Grid Grid.Row="1" Grid.Column="0" Margin="8">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Grid.Row="0" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock  Text="设备列表" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-            </StackPanel>
-            <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" Background="Black" Foreground="White">
-                <ListBox.ItemContainerStyle>
-                    <Style TargetType="ListBoxItem">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsConnected}" Value="False">
-                                <Setter Property="Foreground" Value="Gray"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </ListBox.ItemContainerStyle>
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel Orientation="Horizontal">
-                            <Path Data="M2,2 L14,2 L14,10 L2,10 Z M4,4 L12,4 L12,8 L4,8 Z M6,11 L10,11 L8,14 Z"  Stroke="Black" Fill="LightGray" Width="16" Height="16" Margin="0,0,8,0"/>
-                            <TextBlock Text="{Binding Name}" Margin="5"/>
-                            <TextBlock Text="{Binding IpAddress}"/>
-                            <Ellipse Width="10" Height="10" Fill="{Binding IsConnected,Converter={StaticResource BoolToBrushConverter}}" Margin="5,0,0,0"/>
-                        </StackPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-            <StackPanel Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock   Text="设备详情" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-            </StackPanel>
-            <Grid Grid.Row="1" Grid.Column="1" Margin="8">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="3*"/>
-                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0">
-                    <Run Text="{Binding SelectedDevice.Name}"/>
-                    <Run Text="{Binding SelectedDevice.IpAddress}"/>
-                </TextBlock>
-                <StackPanel Grid.Row="1" VerticalAlignment="Center" Orientation="Horizontal">
-                    <TextBlock Text="状态:" Margin="10"/>
-                    <Ellipse Width="10" Height="10" Fill="{Binding IsConnected,Converter={StaticResource BoolToBrushConverter}}" Margin="10"/>
-                    <TextBlock Text="{Binding  IsConnected,Converter={StaticResource BoolToTextConverter}}" Margin="10"/>
-                    <Button Content="连接" Command="{Binding ConnectCommand}" Margin="10,0,0,0"/>
-                    <Button Content="断开" Command="{Binding DisconnectCommand}" Margin="10,0,0,0"/>
-                    <TextBlock Text="{Binding Status}" Background="Black" Foreground="White" FontSize="15"  Margin="10"/>
-                    <TextBlock Text="{Binding Statu}" Background="Black" Foreground="White" FontSize="15" Margin="10"/>
-                    <TextBlock>
-                        <Run Text="实时温度:"/>
-                        <Run Text="{Binding Temperature }" Background="Black" Foreground="White" FontSize="15" />
-                    </TextBlock>
-                </StackPanel>
+                <Grid Grid.Row="0" Grid.Column="0" Margin="10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                    </Grid>
+                    <Border Background="Gray" BorderBrush="White" BorderThickness="1" Height="40" Width="Auto" >
+                        <TextBlock VerticalAlignment="Center">
+             <Run Text="设备监控面板" Foreground="White"/>
+                        </TextBlock>
+                    </Border>
+                    <Grid Grid.Column="1">
+                        <Button Content="刷新"  HorizontalAlignment="Right"/>
+                    </Grid>
+                </Grid>
+
+                <Grid Grid.Row="1" Grid.Column="0" Margin="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Row="0" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock  Text="设备列表" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                    </StackPanel>
+                    <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" Background="Black" Foreground="White">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                        <Setter Property="Foreground" Value="Gray"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Data="M2,2 L14,2 L14,10 L2,10 Z M4,4 L12,4 L12,8 L4,8 Z M6,11 L10,11 L8,14 Z"  Stroke="Black" Fill="LightGray" Width="16" Height="16" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{Binding Name}" Margin="5"/>
+                                    <TextBlock Text="{Binding IpAddress}"/>
+                                    <Ellipse Width="10" Height="10" Fill="{Binding IsConnected,Converter={StaticResource BoolToBrushConverter}}" Margin="5,0,0,0"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <StackPanel Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock   Text="设备详情" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                    </StackPanel>
+                    <Grid Grid.Row="1" Grid.Column="1" Margin="8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="3*"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0">
+                <Run Text="{Binding SelectedDevice.Name}"/>
+                <Run Text="{Binding SelectedDevice.IpAddress}"/>
+                        </TextBlock>
+                        <StackPanel Grid.Row="1" VerticalAlignment="Center" Orientation="Horizontal">
+                            <TextBlock Text="状态:" Margin="10"/>
+                            <Ellipse Width="10" Height="10" Fill="{Binding IsConnected,Converter={StaticResource BoolToBrushConverter}}" Margin="10"/>
+                            <TextBlock Text="{Binding  IsConnected,Converter={StaticResource BoolToTextConverter}}" Margin="10"/>
+                            <Button Content="连接" Command="{Binding ConnectCommand}" Margin="10,0,0,0"/>
+                            <Button Content="断开" Command="{Binding DisconnectCommand}" Margin="10,0,0,0"/>
+                            <TextBlock Text="{Binding Status}" Background="Black" Foreground="White" FontSize="15"  Margin="10"/>
+                            <TextBlock Text="{Binding Statu}" Background="Black" Foreground="White" FontSize="15" Margin="10"/>
+                            <TextBlock>
+                    <Run Text="实时温度:"/>
+                    <Run Text="{Binding Temperature }" Background="Black" Foreground="White" FontSize="15" />
+                            </TextBlock>
+                        </StackPanel>
+                        <Grid Grid.Row="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="127*"/>
+                                <ColumnDefinition Width="577*"/>
+                            </Grid.ColumnDefinitions>
+                            <views:LogView Grid.ColumnSpan="2"/>
+                        </Grid>
+                        <Grid Grid.Row="3">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <ProgressBar Grid.Row="0" Value="{Binding Count}" Maximum="{Binding MaxCount}" Height="20"/>
+                            <TextBox Text="多行文本框" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" TextWrapping="Wrap">
+
+                            </TextBox>
+                        </Grid>
+                    </Grid>
+                </Grid>
                 <Grid Grid.Row="2">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="127*"/>
-                        <ColumnDefinition Width="577*"/>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <views:LogView Grid.ColumnSpan="2"/>
-                </Grid>
-                <Grid Grid.Row="3">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <ProgressBar Grid.Row="0" Value="{Binding Count}" Maximum="{Binding MaxCount}" Height="20"/>
-                    <TextBox Text="多行文本框" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" TextWrapping="Wrap">
-
-                    </TextBox>
+                    <views:StatusBarView Grid.ColumnSpan="4" Grid.Row="0"/>
+                    <Button Grid.Column="1" Grid.Row="1" Content="读取" Command="{Binding ReadAllCommand}" Margin="10"/>
+                    <Button Grid.Column="2" Grid.Row="1" Content="取消" Command="{Binding CancelCommand}" Margin="10"/>
+                    <Button Grid.Column="3" Grid.Row="1" Content="不加锁演示按钮" Command="{Binding DemoWithoutLockCommand}" Margin="10"/>
+                    <Button Grid.Column="4" Grid.Row="1" Content="加锁演示按钮" Command="{Binding DemoWithLockCommand}" Margin="10"/>
+                    <Button Grid.Column="5" Grid.Row="1" Content="ConcurrentQueue" Command="{Binding ConcurrentQueueCommand}" Margin="10"/>
+                    <TextBlock Grid.Row="0" Grid.Column="5" Text="{Binding Text}"/>
+                    <Button Grid.Column="6" Grid.Row="0" Content="修改Text" Command="{Binding QueryCommand}"/>
+                    <StackPanel Grid.Row="2" Grid.ColumnSpan="3">
+                        <TextBlock x:Name="testText" Text="初始文字" FontSize="16" Margin="10"/>
+                        <Button Content="后台直接改UI" Click="Crash_Click" Margin="10"/>
+                        <Button Content="Dispatcher修复版" Click="Fix_Click" Margin="10"/>
+                    </StackPanel>
                 </Grid>
             </Grid>
-        </Grid>
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-            <views:StatusBarView Grid.ColumnSpan="4" Grid.Row="0"/>
-            <Button Grid.Column="1" Grid.Row="1" Content="读取" Command="{Binding ReadAllCommand}" Margin="10"/>
-            <Button Grid.Column="2" Grid.Row="1" Content="取消" Command="{Binding CancelCommand}" Margin="10"/>
-            <Button Grid.Column="3" Grid.Row="1" Content="不加锁演示按钮" Command="{Binding DemoWithoutLockCommand}" Margin="10"/>
-            <Button Grid.Column="4" Grid.Row="1" Content="加锁演示按钮" Command="{Binding DemoWithLockCommand}" Margin="10"/>
-            <Button Grid.Column="5" Grid.Row="1" Content="ConcurrentQueue" Command="{Binding ConcurrentQueueCommand}" Margin="10"/>
-            <TextBlock Grid.Row="0" Grid.Column="5" Text="{Binding Text}"/>
-            <Button Grid.Column="6" Grid.Row="0" Content="修改Text" Command="{Binding QueryCommand}"/>
-            <StackPanel Grid.Row="2" Grid.ColumnSpan="3">
-                <TextBlock x:Name="testText" Text="初始文字" FontSize="16" Margin="10"/>
-                <Button Content="后台直接改UI" Click="Crash_Click" Margin="10"/>
-                <Button Content="Dispatcher修复版" Click="Fix_Click" Margin="10"/>
-            </StackPanel>
-        </Grid>
-    </Grid>
+        </TabItem>
+        
+        <TabItem Header="历史查询">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0" Margin="10" Orientation="Horizontal">
+                    <TextBlock Text="起始时间:" Margin="10" FontSize="20" FontWeight="Bold"/>
+                    <hc:DateTimePicker SelectedDateTime="{Binding StartTime,UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="到"  Margin="10" FontSize="20" FontWeight="Bold"/>
+                    <TextBlock Text="结束时间:" Margin="10" FontSize="20" FontWeight="Bold"/>
+                    <hc:DateTimePicker SelectedDateTime="{Binding EndTime,UpdateSourceTrigger=PropertyChanged}"/>
+                    <Button Content="历史查询" Command="{Binding HistoryQueryCommand}" Margin="10" Height="30"/>
+                    <Button Content="开始数据库压测" Command="{Binding StartDbTestCommand}"/>
+                </StackPanel>
+                <DataGrid Grid.Row="1" ItemsSource="{Binding QueryResult}" IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="80"/>
+                        <DataGridTextColumn Header="温度(℃)" Binding="{Binding Temperature}" Width="120"/>
+                        <DataGridTextColumn Header="采集时间" Binding="{Binding RecordTime, StringFormat='yyyy-MM-dd HH:mm:ss'}" Width="240"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </TabItem>
+        <TabItem Header="实时图表">
+            <lvc:CartesianChart Series="{Binding TempLiveCharts}" LegendLocation="None" Background="Transparent" DisableAnimations="False" Margin="8">
+                <lvc:CartesianChart.AxisX>
+                    <lvc:Axis IsEnabled="True">
+                        <lvc:Axis.Separator>
+                            <lvc:Separator IsEnabled="False"/>
+                        </lvc:Axis.Separator>
+                    </lvc:Axis>
+                </lvc:CartesianChart.AxisX>
+
+                <lvc:CartesianChart.AxisY>
+                    <lvc:Axis MinValue="0" MaxValue="150" ShowLabels="True">
+                        <lvc:Axis.Separator>
+                            <lvc:Separator IsEnabled="False"/>
+                        </lvc:Axis.Separator>
+                    </lvc:Axis>
+                </lvc:CartesianChart.AxisY>
+            </lvc:CartesianChart>
+        </TabItem>
+    </TabControl>
+    
+    
 
 </Window>
