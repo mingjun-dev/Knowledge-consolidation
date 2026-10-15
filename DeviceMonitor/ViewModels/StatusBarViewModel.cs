@@ -18,10 +18,7 @@ namespace DeviceMonitor.ViewModels
         
         public StatusBarViewModel()
         {
-            WeakReferenceMessenger.Default.Register<Message.DeviceStatusMessage>(this, (r, m) =>
-            {
-                StatusText = $"{m.DeviceName} {(m.IsConnected ? "已连接" : "已断开")} {m.Time.ToString("HH:mm:ss")}";
-            });
+          
         }
 
         [RelayCommand]

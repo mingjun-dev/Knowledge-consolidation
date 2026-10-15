@@ -1,5 +1,7 @@
-﻿using DeviceMonitor.Services;
+﻿using DeviceMonitor.Models;
+using DeviceMonitor.Services;
 using DeviceMonitor.ViewModels;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using System;
@@ -32,7 +34,7 @@ namespace DeviceMonitor
 
         private const string LogPath = "Logs\\log-.txt";
 
-        string  connectionString = "Data Source=DeviceMonitor.db;";
+        //string  connectionString = "Data Source=DeviceMonitor.db;";
         protected override void OnStartup(StartupEventArgs e)
         {
 
@@ -45,16 +47,36 @@ namespace DeviceMonitor
                 .WriteTo.Console(outputTemplate: LogTemplate)
                 .WriteTo.File(LogPath, rollingInterval: RollingInterval.Day, outputTemplate: LogTemplate, shared: true)
                 .CreateLogger();
-            SqliteDbService.Initialize(connectionString);
-            var services = new ServiceCollection();
 
+           
+           
+
+            //① 先构建出 IConfiguration 对象
+            var configBuilder = new ConfigurationBuilder()
+                .SetBasePath(System.IO.Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+                 IConfiguration config = configBuilder.Build();
+
+            var services = new ServiceCollection();
             services.AddSingleton<IDeviceService, MockDeviceService>();
-            services.AddSingleton<MainViewModel>();
             services.AddSingleton<StatusBarViewModel>();
             services.AddSingleton<LogViewModel>();
             services.AddSingleton<MainWindow>();
+            //② 把原生IConfiguration注册进DI容器
+            services.AddSingleton(config);
+            //③ 注册IConfigService，ConfigService依赖IConfiguration
+            services.AddSingleton<IConfigService, ConfigService>();
+            services.AddSingleton<MainViewModel>();
 
             ServiceProvider = services.BuildServiceProvider();
+
+            var configService = ServiceProvider.GetRequiredService<IConfigService>();
+
+            var dbOption = configService.GetDbConfig();
+            string connectionString = $"Data Source={dbOption.DbFilePath}";
+            SqliteDbService.Initialize(connectionString);
+
+            
             var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
             mainWindow.Show();
            
@@ -62,6 +84,7 @@ namespace DeviceMonitor
 
         protected override void OnExit(ExitEventArgs e)
         {
+            Log.CloseAndFlush();
             base.OnExit(e);
             if (ServiceProvider is IDisposable disposable)
             {

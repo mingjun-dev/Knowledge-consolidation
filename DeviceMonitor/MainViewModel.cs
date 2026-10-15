@@ -3,6 +3,9 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using DeviceMonitor.Models;
 using DeviceMonitor.Services;
+using LiveCharts;
+using LiveCharts.Defaults;
+using LiveCharts.Wpf;
 using Serilog;
 using System;
 using System.Collections.Concurrent;
@@ -18,6 +21,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Documents;
+using System.Windows.Media;
 using System.Windows.Threading;
 using static DeviceMonitor.Models.Message;
 
@@ -44,6 +48,11 @@ namespace DeviceMonitor
         private double temperature;
 
         [ObservableProperty]
+        private string pauseOrContinue = "暂停图表";
+
+        private bool _isChartPause;
+
+        [ObservableProperty]
         private string statu;
 
         [ObservableProperty]
@@ -55,13 +64,16 @@ namespace DeviceMonitor
         [ObservableProperty]
         private DateTime? endTime;
 
-        private ObservableCollection<SensorRecord> QueryResult;
+        public ObservableCollection<SensorRecord> QueryResult { get; set; }
 
         [ObservableProperty]
         private long id;
 
         [ObservableProperty]
         private DateTime? recordTime;
+
+        [ObservableProperty]
+        private SeriesCollection tempLiveCharts;
 
         private readonly IDeviceService _deviceService;
 
@@ -71,13 +83,28 @@ namespace DeviceMonitor
 
         private ModbusService modbusService;
 
+        private readonly IConfigService _configService;
 
-        public MainViewModel(IDeviceService deviceService)
+        public MainViewModel(IDeviceService deviceService, IConfigService configService)
         {
             _deviceService = deviceService;
             _ = LoadDevicesAsync();
             mockDeviceService = new MockDeviceService();
             QueryResult = new ObservableCollection<SensorRecord>();
+            TempLiveCharts = new SeriesCollection()
+            {
+                new LineSeries
+                {
+                    Title="温度趋势",
+                    Values = new ChartValues<ObservablePoint>(),
+                    Fill = Brushes.Gray,
+                    Stroke = Brushes.Blue,
+                    StrokeThickness = 1,
+                    PointGeometry = null,
+                    LineSmoothness = 0
+                }
+            };
+            _configService = configService;
 
 
             //_timer = new DispatcherTimer();
@@ -102,19 +129,15 @@ namespace DeviceMonitor
         {
             Stopwatch sw = Stopwatch.StartNew();
             Random rand = new Random();
-            for (int i = 0; i < 1000; i++)
+            var record = new SensorRecord
             {
-                var record = new SensorRecord
-                {
-                    Temperature = rand.Next(20, 50),
-                    RecordTime = DateTime.Now
-                };
-                await SqliteDbService.InsertAsync(Temperature, RecordTime ?? DateTime.Now);
-                await Task.Delay(1000);
-            }
-           
+                Temperature = rand.Next(20, 50),
+                RecordTime = DateTime.Now
+            };
+            await SqliteDbService.InsertAsync(record.Temperature, record.RecordTime);
+
             sw.Stop();
-            Log.Information($"写入1000条完成，总耗时：{sw.ElapsedMilliseconds} ms");
+            
         }
         private async Task<List<SensorRecord>> QueryDbAsync(DateTime start, DateTime end)
         {
@@ -137,32 +160,46 @@ namespace DeviceMonitor
             //}
             try
             {
+                if (SelectedDevice is null)
+                {
+                    Statu = "请先选择设备";
+                    LogService.Warn("未选择设备，拒绝连接");
+                    return;
+                }
+
+                CollectionViewSource.GetDefaultView(Devices).Refresh();
+
+                PlcOption plcOption = _configService.GetPlcConfig();
+                modbusService = new ModbusService();
+
+                //真正网络连接
+                await modbusService.ConnectAsync(plcOption.IpAddress, plcOption.Port, 3000);
+
+                //✅连接成功之后，再修改状态！
                 SelectedDevice.IsConnected = true;
                 IsConnected = true;
-                WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage(SelectedDevice.Name, true, DateTime.Now, ""));
-                CollectionViewSource.GetDefaultView(Devices).Refresh();
-                try
-                {
+                WeakReferenceMessenger.Default.Send( new Message.DeviceStatusMessage("温度PLC", true, DateTime.Now, "Modbus握手完成"));
 
+                Statu = "已连接";
+                LogService.Info($"PLC连接成功 Ip={plcOption.IpAddress}");
 
-                    modbusService = new ModbusService();
-                    await modbusService.ConnectAsync("127.0.0.1", 502, 3000);
-                    Statu = "已连接";
-                    _cts = new CancellationTokenSource();
-                    var ct = _cts.Token;
-                    _ = Task.Run(() => PollLoopAsync(ct));
-                }
-                catch (Exception)
-                {
-
-                    throw;
-                }
+                _cts = new CancellationTokenSource();
+                var ct = _cts.Token;
+                _ = Task.Run(() => PollLoopAsync(ct));
             }
             catch (Exception ex)
             {
+                Statu = "连接失败";
+                LogService.Error("PLC连接失败", ex);
                 WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage("", false, DateTime.Now, $"{ex.Message}"));
-            }
 
+                //连接失败，清理资源
+                modbusService?.Disconnect();
+                modbusService = null;
+                _cts?.Cancel();
+                _cts?.Dispose();
+                _cts = null;
+            }
         }
 
         [RelayCommand]
@@ -173,55 +210,120 @@ namespace DeviceMonitor
             //    StatusText = "请先选择一台设备";
             //    return;
             //}
-            _cts.Cancel();
-            SelectedDevice.IsConnected = false;
-            IsConnected = false;
-            WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage(SelectedDevice.Name, false, DateTime.Now, ""));
-            CollectionViewSource.GetDefaultView(Devices).Refresh();
-
             try
             {
+                if (SelectedDevice != null)
+                {
+                    SelectedDevice.IsConnected = false;
+                    WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage(SelectedDevice.Name, false, DateTime.Now, ""));
+                }
+
+                IsConnected = false;
+                CollectionViewSource.GetDefaultView(Devices).Refresh();
+
                 modbusService?.Disconnect();
                 modbusService = null;
+
+                Statu = "已断开";
+                LogService.Info("PLC断开成功");
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                LogService.Error("PLC断开发生异常", ex);
+                Statu = "断开异常";
             }
-
-
+            finally
+            {
+                if (_cts != null)
+                {
+                    _cts.Cancel();
+                    _cts.Dispose();
+                    _cts = null; //必须置空
+                }
+            }
         }
         private async Task PollLoopAsync(CancellationToken ct)
         {
+            LogService.Info("轮询读取温度任务已启动");
             while (!ct.IsCancellationRequested)
             {
                 try
                 {
                     Temperature = await modbusService.ReadTemperatureAsync(1, 0);
                     Status = "读取成功";
+                    LogService.Info($"温度读取成功，当前温度:{Temperature}");
+
                     try
                     {
                         await SqliteDbService.InsertAsync(Temperature, DateTime.Now);
+                        await Task.Delay(500, ct);
+                        AddChartPoint(Temperature, DateTime.Now);
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-
+                        LogService.Warn("Sqlite数据库插入温度记录失败");
                     }
-                }
-                catch (Exception)
-                {
-                    Status = "读取失败";
-                    WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage("", false, DateTime.Now, "温度读取失败"));
-                }
-                try
-                {
+
+                    //✅ 把Delay移到外层try内部，不再单独套try‑catch
                     await Task.Delay(200, ct);
                 }
                 catch (OperationCanceledException)
                 {
+                    //手动断开触发的正常取消，走到这里
+                    LogService.Info("轮询任务收到取消信号，正常退出循环");
                     break;
                 }
+                catch (Exception ex)
+                {
+                    //真正业务异常：读modbus、数据库以外的报错
+                    Status = "读取失败";
+                    LogService.Error("Modbus读取温度发生异常", ex);
+                    WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage("", false, DateTime.Now, "温度读取失败"));
+                }
             }
+            LogService.Info("温度轮询循环已经完全退出");
+        }
+        [RelayCommand]
+        private void ClearChart() 
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                _isChartPause = false;
+                PauseOrContinue = "暂停图表";
+               
+                var lineSeries = TempLiveCharts[0] as LineSeries;
+                if (lineSeries != null)
+                {
+                    lineSeries.Values.Clear();
+                   
+                }
+            });
+        }
+        [RelayCommand]
+        private void StartOrStop() 
+        {
+            _isChartPause = !_isChartPause;
+            PauseOrContinue = _isChartPause ? "继续图表" : "暂停图表";
+        }
+        private void AddChartPoint(double temp, DateTime time, int maxPoints = 100)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                if (_isChartPause) return;
+                if (TempLiveCharts.Count == 0) return;
+
+                var lineSeries = TempLiveCharts[0] as LineSeries;
+                if (lineSeries == null) return;
+
+               
+                var point = new ObservablePoint((double)time.Ticks, temp);
+                lineSeries.Values.Add(point);
+
+                while (lineSeries.Values.Count > maxPoints)
+                {
+                    lineSeries.Values.RemoveAt(0);
+                }
+            });
         }
 
         partial void OnSelectedDeviceChanged(Device value)

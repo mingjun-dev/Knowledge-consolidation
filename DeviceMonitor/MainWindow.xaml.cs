@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using DeviceMonitor.ViewModels;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -20,6 +21,7 @@ namespace DeviceMonitor
         {
             InitializeComponent();
             DataContext = mainViewModel;
+            logView.DataContext = new LogViewModel();
         }
         private void Crash_Click(object sender, RoutedEventArgs e)
         {

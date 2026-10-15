@@ -109,7 +109,7 @@
                                 <ColumnDefinition Width="127*"/>
                                 <ColumnDefinition Width="577*"/>
                             </Grid.ColumnDefinitions>
-                            <views:LogView Grid.ColumnSpan="2"/>
+                            <views:LogView x:Name="logView" Grid.ColumnSpan="2"/>
                         </Grid>
                         <Grid Grid.Row="3">
                             <Grid.RowDefinitions>
@@ -170,7 +170,7 @@
                     <Button Content="历史查询" Command="{Binding HistoryQueryCommand}" Margin="10" Height="30"/>
                     <Button Content="开始数据库压测" Command="{Binding StartDbTestCommand}"/>
                 </StackPanel>
-                <DataGrid Grid.Row="1" ItemsSource="{Binding QueryResult}" IsReadOnly="True">
+                <DataGrid Grid.Row="1" ItemsSource="{Binding QueryResult}" IsReadOnly="True" AutoGenerateColumns="False">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="80"/>
                         <DataGridTextColumn Header="温度(℃)" Binding="{Binding Temperature}" Width="120"/>
@@ -179,24 +179,36 @@
                 </DataGrid>
             </Grid>
         </TabItem>
-        <TabItem Header="实时图表">
-            <lvc:CartesianChart Series="{Binding TempLiveCharts}" LegendLocation="None" Background="Transparent" DisableAnimations="False" Margin="8">
-                <lvc:CartesianChart.AxisX>
-                    <lvc:Axis IsEnabled="True">
-                        <lvc:Axis.Separator>
-                            <lvc:Separator IsEnabled="False"/>
-                        </lvc:Axis.Separator>
-                    </lvc:Axis>
-                </lvc:CartesianChart.AxisX>
+        
+        <TabItem Header="实时图表" Height="28" VerticalAlignment="Top">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <lvc:CartesianChart Grid.Row="0" Series="{Binding TempLiveCharts}" LegendLocation="None" Background="Transparent" DisableAnimations="False" Margin="8">
+                    <lvc:CartesianChart.AxisX>
+                        <lvc:Axis IsEnabled="True">
+                            <lvc:Axis.Separator>
+                                <lvc:Separator IsEnabled="False"/>
+                            </lvc:Axis.Separator>
+                        </lvc:Axis>
+                    </lvc:CartesianChart.AxisX>
 
-                <lvc:CartesianChart.AxisY>
-                    <lvc:Axis MinValue="0" MaxValue="150" ShowLabels="True">
-                        <lvc:Axis.Separator>
-                            <lvc:Separator IsEnabled="False"/>
-                        </lvc:Axis.Separator>
-                    </lvc:Axis>
-                </lvc:CartesianChart.AxisY>
-            </lvc:CartesianChart>
+                    <lvc:CartesianChart.AxisY>
+                        <lvc:Axis MinValue="0" MaxValue="150" ShowLabels="True">
+                            <lvc:Axis.Separator>
+                                <lvc:Separator IsEnabled="False"/>
+                            </lvc:Axis.Separator>
+                        </lvc:Axis>
+                    </lvc:CartesianChart.AxisY>
+                </lvc:CartesianChart>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <Button Content="清空图表" Command="{Binding ClearChartCommand}" Height="50"/>
+                    <Button Content="{Binding PauseOrContinue}" Command="{Binding StartOrStopCommand}" Height="50" Margin="20"/>
+                    
+                </StackPanel>
+            </Grid>
         </TabItem>
     </TabControl>
     

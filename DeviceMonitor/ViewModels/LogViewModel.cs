@@ -15,12 +15,20 @@ namespace DeviceMonitor.ViewModels
         public ObservableCollection<string> LogItems { get; } = new();
         public LogViewModel()
         {
-            LogItems.Add("系统启动完成");
-            WeakReferenceMessenger.Default.Register<DeviceStatusMessage>(this, (_, msg) =>
+            //LogItems.Add("系统启动完成");
+            //WeakReferenceMessenger.Default.Register<DeviceStatusMessage>(this, (_, msg) =>
+            //{
+            //    string line = $"[{msg.Time:HH:mm:ss}] {msg.DeviceName} {(msg.IsConnected ? "连接成功" : "断开成功")} {msg.Content} ";
+            //    LogItems.Add(line); 
+            //});
+        }
+        public void AddLog(string logText)
+        {
+            LogItems.Add(logText);
+            if (LogItems.Count > 200)
             {
-                string line = $"[{msg.Time:HH:mm:ss}] {msg.DeviceName} {(msg.IsConnected ? "连接成功" : "断开成功")} {msg.Content} ";
-                LogItems.Add(line); 
-            });
+                LogItems.RemoveAt(0);
+            }
         }
     }
 }
