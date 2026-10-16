@@ -18,6 +18,7 @@ namespace DeviceMonitor
     /// </summary>
     public partial class App : Application
     {
+        
         //全局唯一的日志框
         public static RichTextBox LogView = new RichTextBox()
         {
@@ -48,9 +49,6 @@ namespace DeviceMonitor
                 .WriteTo.File(LogPath, rollingInterval: RollingInterval.Day, outputTemplate: LogTemplate, shared: true)
                 .CreateLogger();
 
-           
-           
-
             //① 先构建出 IConfiguration 对象
             var configBuilder = new ConfigurationBuilder()
                 .SetBasePath(System.IO.Directory.GetCurrentDirectory())
@@ -79,7 +77,6 @@ namespace DeviceMonitor
             
             var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
             mainWindow.Show();
-           
         }
 
         protected override void OnExit(ExitEventArgs e)
@@ -91,6 +88,35 @@ namespace DeviceMonitor
                 disposable.Dispose();
             }
         }
+        private void SetExceptionHandling()
+        {
+            DispatcherUnhandledException += (s, e) => 
+            {
+                 var ex = e.Exception;
+                LogService.Error($"UI线程未处理的异常{ex.Message}", ex);
+                MessageBox.Show($"程序遇到异常：{ex.Message}\r\n程序将继续运行，请保存你的工作.","异常提示",MessageBoxButton.OK,MessageBoxImage.Error);
+                e.Handled = true;
+            };
+
+            AppDomain.CurrentDomain.UnhandledException += (s, e) => 
+            {
+                var ex = e.ExceptionObject as Exception;
+                LogService.Error($"非UI线程未处理的异常{ex.Message}");
+            };
+
+            TaskScheduler.UnobservedTaskException += (s, e) =>
+            {
+                if (e.Exception != null)
+                {
+                    AggregateException aggEx = e.Exception;
+                    foreach (var ex in aggEx.InnerExceptions)
+                    {
+                        LogService.Error($"Task线程未处理的异常{ex.Message}", ex);
+
+                    }
+                }
+                e.SetObserved();
+            };
+        }
     }
-    
 }

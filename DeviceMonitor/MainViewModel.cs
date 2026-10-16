@@ -116,28 +116,43 @@ namespace DeviceMonitor
         [RelayCommand]
         private async Task HistoryQueryAsync()
         {
-            var list =  await QueryDbAsync(StartTime ?? DateTime.Now, EndTime ?? DateTime.Now);
-            QueryResult.Clear();
-            foreach (var record in list) 
+            try
             {
-                QueryResult.Add(record);
+                var list = await QueryDbAsync(StartTime ?? DateTime.Now, EndTime ?? DateTime.Now);
+                QueryResult.Clear();
+                foreach (var record in list)
+                {
+                    QueryResult.Add(record);
+                }
             }
+            catch (Exception ex)
+            {
+                LogService.Error("历史记录查询数据库失败", ex);
+                WeakReferenceMessenger.Default.Send(new DeviceStatusMessage("", false, DateTime.Now, "查询历史记录失败：" + ex.Message));
+            }
+
         }
 
         [RelayCommand]
         private async Task StartDbTest()
         {
-            Stopwatch sw = Stopwatch.StartNew();
-            Random rand = new Random();
-            var record = new SensorRecord
+            try
             {
-                Temperature = rand.Next(20, 50),
-                RecordTime = DateTime.Now
-            };
-            await SqliteDbService.InsertAsync(record.Temperature, record.RecordTime);
+                Stopwatch sw = Stopwatch.StartNew();
+                Random rand = new Random();
+                var record = new SensorRecord
+                {
+                    Temperature = rand.Next(20, 50),
+                    RecordTime = DateTime.Now
+                };
+                await SqliteDbService.InsertAsync(record.Temperature, record.RecordTime);
+                sw.Stop();
+            }
+            catch (Exception ex)
+            {
+                LogService.Error("测试插入数据库失败", ex);
+            }
 
-            sw.Stop();
-            
         }
         private async Task<List<SensorRecord>> QueryDbAsync(DateTime start, DateTime end)
         {
@@ -178,7 +193,7 @@ namespace DeviceMonitor
                 //✅连接成功之后，再修改状态！
                 SelectedDevice.IsConnected = true;
                 IsConnected = true;
-                WeakReferenceMessenger.Default.Send( new Message.DeviceStatusMessage("温度PLC", true, DateTime.Now, "Modbus握手完成"));
+                WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage("温度PLC", true, DateTime.Now, "Modbus握手完成"));
 
                 Statu = "已连接";
                 LogService.Info($"PLC连接成功 Ip={plcOption.IpAddress}");
@@ -249,14 +264,28 @@ namespace DeviceMonitor
             {
                 try
                 {
-                    Temperature = await modbusService.ReadTemperatureAsync(1, 0);
+                    if (modbusService is null)
+                    {
+                        LogService.Warn("Modbus服务实例为空，终止轮询");
+                        break;
+                    }
+
+                    Temperature = await RetryStrategy.RetryAsync<double>(
+                        func: async () =>
+                        {
+                            return await modbusService.ReadTemperatureAsync(1, 0);
+                        },
+                        maxRetryCount: 2,
+                        initialDelayMs: 200,
+                        ct: ct,
+                        shouldRetry: RetryStrategy.IsModbusTransientException
+                        );
                     Status = "读取成功";
                     LogService.Info($"温度读取成功，当前温度:{Temperature}");
 
                     try
                     {
                         await SqliteDbService.InsertAsync(Temperature, DateTime.Now);
-                        await Task.Delay(500, ct);
                         AddChartPoint(Temperature, DateTime.Now);
                     }
                     catch (Exception ex)
@@ -284,23 +313,23 @@ namespace DeviceMonitor
             LogService.Info("温度轮询循环已经完全退出");
         }
         [RelayCommand]
-        private void ClearChart() 
+        private void ClearChart()
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
                 _isChartPause = false;
                 PauseOrContinue = "暂停图表";
-               
+
                 var lineSeries = TempLiveCharts[0] as LineSeries;
                 if (lineSeries != null)
                 {
                     lineSeries.Values.Clear();
-                   
+
                 }
             });
         }
         [RelayCommand]
-        private void StartOrStop() 
+        private void StartOrStop()
         {
             _isChartPause = !_isChartPause;
             PauseOrContinue = _isChartPause ? "继续图表" : "暂停图表";
@@ -315,7 +344,7 @@ namespace DeviceMonitor
                 var lineSeries = TempLiveCharts[0] as LineSeries;
                 if (lineSeries == null) return;
 
-               
+
                 var point = new ObservablePoint((double)time.Ticks, temp);
                 lineSeries.Values.Add(point);
 
@@ -358,26 +387,35 @@ namespace DeviceMonitor
             var ct = _cts.Token;
             try
             {
-                var devices = await mockDeviceService.GetDevicesAsync();
-                MaxCount = devices.Count;
-                Count = 0;
-                var progress = new Progress<int>(value => Count = value);
-                int completedCount = 0;
-                var deviceName = devices.Select(async device =>
+                try
                 {
-                    ct.ThrowIfCancellationRequested();
-                    var temperature = await mockDeviceService.ReadTemperatureAsync(device.Name, ct);
-                    int done = Interlocked.Increment(ref completedCount);
-                    ((IProgress<int>)progress).Report(done);
-                    return temperature;
-                });
-                var results = await Task.WhenAll(deviceName);
+                    var devices = await mockDeviceService.GetDevicesAsync();
+                    MaxCount = devices.Count;
+                    Count = 0;
+                    var progress = new Progress<int>(value => Count = value);
+                    int completedCount = 0;
+                    var deviceName = devices.Select(async device =>
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        var temperature = await mockDeviceService.ReadTemperatureAsync(device.Name, ct);
+                        int done = Interlocked.Increment(ref completedCount);
+                        ((IProgress<int>)progress).Report(done);
+                        return temperature;
+                    });
+                    var results = await Task.WhenAll(deviceName);
+                }
+                catch (OperationCanceledException o)
+                {
+                    Count = 0;
+                    LogService.Error("Modbus读取温度失败", o);
+                    WeakReferenceMessenger.Default.Send(new DeviceStatusMessage("", false, DateTime.Now, $"读取温度失败:原因{o.Message}"));
+                }
             }
-            catch (OperationCanceledException o)
+            catch (Exception ex)
             {
-                Count = 0;
-                WeakReferenceMessenger.Default.Send(new DeviceStatusMessage("", false, DateTime.Now, $"读取温度失败:原因{o.Message}"));
+                LogService.Error("其他异常", ex);
             }
+
         }
         [RelayCommand]
         private async Task CancelAsync()
@@ -467,9 +505,19 @@ namespace DeviceMonitor
         [RelayCommand]
         private void Query()
         {
-            Task.Run(() =>
+            _ = Task.Run(() =>
             {
-                Text = "后台修改";
+                try
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        Text = "后台修改";
+                    });
+                }
+                catch (Exception ex)
+                {
+                    LogService.Error("Query后台任务异常", ex);
+                }
             });
 
         }

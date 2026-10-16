@@ -22,19 +22,4 @@ namespace DeviceMonitor.Models
         Error,
         Debug
     }
-
-    public class LogEventArgs : EventArgs 
-    {
-        public DateTime Time { get;}
-        public LogLevel Level { get; }
-        public string Text { get; }
-
-        public LogEventArgs(DateTime time, LogLevel level, string text)
-        {
-            Time = time;
-            Level = level;
-            Text = text;
-
-        }
-    }
 }

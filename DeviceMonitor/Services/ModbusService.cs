@@ -30,12 +30,18 @@ namespace DeviceMonitor.Services
             catch (Exception ex)
             {
                 WeakReferenceMessenger.Default.Send(new Message.DeviceStatusMessage("", false, DateTime.Now, $"通讯连接失败:{ex.Message}"));
+                Disconnect();
+                throw;
             }
            
         }
         public async Task<ushort[]> ReadHoldingRegistersAsync(byte slaveId, ushort startAddress, ushort count) 
         {
 
+            if (_master is null) 
+            {
+                throw new InvalidOperationException("Modbus为建立连接");
+            }
             for (int i = 0; i < 3; i++)
             {
                 try
@@ -54,6 +60,10 @@ namespace DeviceMonitor.Services
 
         public async Task WriteSingleRegisterAsync(byte slaveId, ushort address, ushort value) 
         {
+            if (_master is null)
+            {
+                throw new InvalidOperationException("Modbus为建立连接");
+            }
             for (int i = 0; i < 3; i++)
             {
                 try
@@ -73,6 +83,8 @@ namespace DeviceMonitor.Services
         public async Task<double> ReadTemperatureAsync(byte slaveId, ushort address) 
         {
             var raw = await ReadHoldingRegistersAsync(slaveId, address, 1);
+            if (raw == null || raw.Length == 0)
+                throw new Exception("Modbus读取寄存器返回空数据");
             return raw[0] / 10.0;
         }
         public void Disconnect()
@@ -92,5 +104,6 @@ namespace DeviceMonitor.Services
                 _tcpClient = null;
             }
         }
+
     }
 }

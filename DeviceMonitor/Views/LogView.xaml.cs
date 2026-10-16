@@ -30,7 +30,9 @@ namespace DeviceMonitor.Views
             InitializeComponent();
             if (DesignerProperties.GetIsInDesignMode(this))
                 return;
-            DataContext = App.ServiceProvider.GetRequiredService<ViewModels.LogViewModel>();
+            DataContext = App.ServiceProvider?.GetRequiredService<ViewModels.LogViewModel>();
+
+            //控件加载完成事件
             Loaded += (s, e) =>
             {
                 //①接收普通日志消息：来自LogService发送的UiLogMessage
@@ -62,6 +64,7 @@ namespace DeviceMonitor.Views
                     });
                 });
             };
+
 
             Unloaded += (s, e) =>
             {
